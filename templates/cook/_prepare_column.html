@@ -1,0 +1,39 @@
+<div id="cook-prepare-column" hx-swap-oob="true">
+  <div class="card">
+    <div class="card-header">
+      <strong>Что приготовить</strong>
+    </div>
+
+    <div class="card-body">
+      {% if not prepare_summary %}
+        <div class="text-muted">Нет заказов на выбранную дату.</div>
+      {% else %}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Блюдо</th>
+                <th class="text-end">Всего</th>
+                <th class="text-end">Оплачено</th>
+                <th class="text-end">Ожидает оплаты</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for name, s in prepare_summary.items() %}
+                <tr>
+                  <td>{{ name }}</td>
+                  <td class="text-end">{{ s.total }}</td>
+                  <td class="text-end">{{ s.paid }}</td>
+                  <td class="text-end">{{ s.created }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="small text-muted">
+          “Оплачено” — точно готовим. “Ожидает оплаты” — заказ создан, но не оплачен.
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

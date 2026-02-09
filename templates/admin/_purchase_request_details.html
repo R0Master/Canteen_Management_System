@@ -1,0 +1,86 @@
+<div class="p-3">
+  <div class="mb-2">
+    <b>Статус:</b> {{ status_ru }} ·
+    <b>Создана:</b> {{ created_at }} ·
+    <b>Кем:</b> {{ creator }} ·
+    <b>Сумма:</b> {{ "%.2f"|format(total_sum) }}
+  </div>
+
+  {% if comment %}
+    <div class="text-muted mb-2"><b>Комментарий:</b> {{ comment }}</div>
+  {% endif %}
+
+  {# ---------- helpers: формат и перевод базовых единиц в человеко-единицы ---------- #}
+  {% macro fmt_qty(x) -%}
+    {# печатаем без лишних нулей: 2 -> "2", 2.5 -> "2.5", 2.333 -> "2.333" #}
+    {%- set r = (x|float) -%}
+    {%- if (r - (r|round(0)))|abs < 0.0000001 -%}
+      {{ (r|round(0))|int }}
+    {%- else -%}
+      {# 3 знака после запятой максимум, потом убираем хвостовые нули #}
+      {%- set s = "%.3f"|format(r) -%}
+      {{ s.rstrip('0').rstrip('.') }}
+    {%- endif -%}
+  {%- endmacro %}
+
+  {% macro human_qty(qty_base, unit_base) -%}
+    {%- set u = (unit_base or '')|lower -%}
+    {%- set q = (qty_base or 0)|float -%}
+    {%- if u in ['г', 'g'] -%}
+      {{ fmt_qty(q / 1000.0) }} кг
+    {%- elif u in ['мл', 'ml'] -%}
+      {{ fmt_qty(q / 1000.0) }} л
+    {%- elif u in ['шт', 'pcs'] -%}
+      {{ fmt_qty(q) }} шт
+    {%- else -%}
+      {{ fmt_qty(q) }} {{ unit_base }}
+    {%- endif -%}
+  {%- endmacro %}
+
+  {% macro fmt_packs(p) -%}
+    {# упаковки часто получаются целыми — показываем как int, иначе 2 знака #}
+    {%- set r = (p|float) -%}
+    {%- if (r - (r|round(0)))|abs < 0.0000001 -%}
+      {{ (r|round(0))|int }}
+    {%- else -%}
+      {{ "%.2f"|format(r) }}
+    {%- endif -%}
+  {%- endmacro %}
+
+  <div class="table-responsive">
+    <table class="table table-sm mb-0">
+      <thead>
+        <tr>
+          <th>Ингредиент</th>
+          <th class="text-end">Кол-во</th>
+          <th class="text-end">Цена/уп</th>
+          <th class="text-end">Упаковок</th>
+          <th class="text-end">Сумма</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for it in items %}
+          <tr>
+            <td>{{ it.name }}</td>
+
+            {# было: {{ it.qty }} {{ it.unit }} -> стало: человеко-единицы #}
+            <td class="text-end">{{ human_qty(it.qty, it.unit) }}</td>
+
+            <td class="text-end">{{ "%.2f"|format(it.pack_price) }}</td>
+
+            {# было: "%.2f" -> стало: целые без .00 #}
+            <td class="text-end">{{ fmt_packs(it.packs_f) }}</td>
+
+            <td class="text-end">{{ "%.2f"|format(it.subtotal) }}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="5" class="text-muted">Нет позиций</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="text-muted small mt-2">
+    Примечание: в базе количество хранится в базовых единицах (г/мл/шт), в интерфейсе показано в кг/л/шт.
+  </div>
+</div>

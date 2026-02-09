@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Мои отзывы</h2>
+
+{% if not reviews %}
+  <div class="alert alert-info">Вы пока не оставляли отзывы.</div>
+{% else %}
+  {% for r in reviews %}
+    <div class="card mb-2">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center gap-2">
+          <div class="fw-semibold">{{ r.menu_item.name }}</div>
+          <div class="text-muted small">{{ r.created_at.strftime("%d.%m.%Y %H:%M") }}</div>
+        </div>
+
+        <div class="mt-1">
+          <span class="me-2">Оценка:</span>
+          <strong>{{ r.rating }}/5</strong>
+        </div>
+
+        {% if r.comment %}
+          <div class="mt-2">{{ r.comment }}</div>
+        {% else %}
+          <div class="mt-2 text-muted">Без комментария</div>
+        {% endif %}
+      </div>
+    </div>
+  {% endfor %}
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <title>Школьная столовая</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap 5 (Zephyr theme) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <!-- App styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/locales-all.global.min.js"></script>
+</head>
+<body class="d-flex flex-column min-vh-100">
+
+<!-- шапка -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand fw-bold" href="/">
+            Школьная столовая
+        </a>
+
+        <button class="navbar-toggler" type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#mainNavbar"
+                aria-controls="mainNavbar"
+                aria-expanded="false"
+                aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNavbar">
+
+            {# --- roles helpers inside template --- #}
+            {% set role_names = [] %}
+            {% if current_user.is_authenticated %}
+                {% for r in current_user.roles %}
+                    {% set _ = role_names.append((r.name or '')|lower) %}
+                {% endfor %}
+            {% endif %}
+            {% set is_student = 'student' in role_names %}
+            {% set is_cook = 'cook' in role_names %}
+            {% set is_admin = 'admin' in role_names %}
+
+            <!-- левая часть -->
+            <ul class="navbar-nav me-auto">
+                {% if current_user.is_authenticated and is_student %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="/student/menu">Меню</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/student/orders">Мои заказы</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/student/profile">Профиль</a>
+                    </li>
+                {% endif %}
+
+                {% if current_user.is_authenticated and is_cook %}
+                  <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('pages.cook_dashboard') }}">Панель</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('pages.cook_inventory') }}">Склад</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('pages.cook_purchase_requests') }}">Заявки</a>
+                  </li>
+                {% endif %}
+
+
+                {% if current_user.is_authenticated and is_admin %}
+                  <li class="nav-item">
+                    <a class="nav-link" href="/admin/dashboard">Статистика</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="/admin/purchase-requests">Заявки</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="/admin/reports">Отчёты</a>
+                  </li>
+                  <li class="nav-item">
+                    <a class="nav-link" href="/admin/users">Пользователи</a>
+                  </li>
+                {% endif %}
+
+            </ul>
+
+            <!-- правая часть -->
+            <ul class="navbar-nav ms-auto">
+                {% if current_user.is_authenticated %}
+                    <li class="nav-item me-3">
+                        <div class="text-end text-white" style="line-height: 1.1;">
+                            {% set fn = (current_user.first_name or '')|trim %}
+                            {% set ln = (current_user.last_name or '')|trim %}
+
+                            <div class="fw-semibold">
+                                {% if fn or ln %}
+                                    {{ (ln ~ ' ' ~ fn)|trim }}
+                                {% else %}
+                                    {{ current_user.email }}
+                                {% endif %}
+                            </div>
+
+                            <div class="small opacity-75">
+                                {{ current_user.email }}
+                            </div>
+                        </div>
+                    </li>
+
+                    <li class="nav-item">
+                        <form method="post" action="/logout" class="d-inline">
+                            <button class="btn btn-outline-light btn-sm" type="submit">
+                                Выйти
+                            </button>
+                        </form>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<main class="flex-grow-1">
+    <div class="container py-5">
+
+        {% if not current_user.is_authenticated %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} mb-3" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- ===== GUEST / LOGIN SCREEN ===== -->
+            <div class="row justify-content-center">
+                <div class="col-md-6 col-lg-5">
+                    <div class="text-center mb-4">
+                        <h1 class="fw-bold mb-3">
+                            Добро пожаловать в школьную столовую
+                        </h1>
+                        <p class="text-muted">
+                            Чтобы воспользоваться нашими услугами,<br>
+                            пожалуйста, авторизуйтесь
+                        </p>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <form method="post" action="/login">
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">
+                                        Электронная почта
+                                    </label>
+                                    <input
+                                        type="email"
+                                        class="form-control"
+                                        id="email"
+                                        name="email"
+                                        placeholder="Введите e-mail"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">
+                                        Пароль
+                                    </label>
+                                    <input
+                                        type="password"
+                                        class="form-control"
+                                        id="password"
+                                        name="password"
+                                        placeholder="Введите пароль"
+                                        required
+                                    >
+                                </div>
+
+                                <div class="d-grid mt-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        Войти
+                                    </button>
+                                </div>
+                            </form>
+
+                            <div class="text-center mt-4">
+                                <small class="text-muted">
+                                    Забыли пароль или нужен аккаунт?<br>
+                                    Обратитесь к администратору или классному руководителю
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        {% else %}
+            
+            {% block content %}
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="card shadow-sm">
+                        <div class="card-body p-4">
+                            <h2 class="h4 mb-2">Вы вошли в систему</h2>
+                            <p class="text-muted mb-0">
+                                Выберите раздел в меню сверху.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endblock %}
+        {% endif %}
+
+    </div>
+</main>
+
+<footer class="bg-light border-top py-3 mt-auto">
+    <div class="container text-center">
+        <small class="text-muted">
+            © {{ current_year }} · Школьная столовая · Учебный проект
+        </small>
+    </div>
+</footer>
+
+</body>
+</html>

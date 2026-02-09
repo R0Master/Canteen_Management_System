@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">Пользователи</h1>
+
+  {% if tab == "students" %}
+    <a class="btn btn-primary" href="{{ url_for('pages.admin_users_create_form', role_key='student') }}">Добавить ученика</a>
+  {% elif tab == "cooks" %}
+    <a class="btn btn-primary" href="{{ url_for('pages.admin_users_create_form', role_key='cook') }}">Добавить повара</a>
+  {% else %}
+    <a class="btn btn-primary" href="{{ url_for('pages.admin_users_create_form', role_key='admin') }}">Добавить администратора</a>
+  {% endif %}
+</div>
+
+{# ===== ЯВНЫЕ БАННЕРЫ РЕЗУЛЬТАТА ОПЕРАЦИИ ===== #}
+
+{% if request.args.get("created") %}
+  <div class="alert alert-success">
+    Пользователь <strong>{{ request.args.get("created") }}</strong> успешно создан.
+  </div>
+{% endif %}
+
+{% if request.args.get("error") %}
+  <div class="alert alert-danger">
+    {% if request.args.get("error") == "email_exists" %}
+      Пользователь с таким e-mail уже существует.
+    {% elif request.args.get("error") == "invalid_input" %}
+      Некорректные данные. Проверьте e-mail и пароль.
+    {% elif request.args.get("error") == "role_missing" %}
+      Ошибка конфигурации ролей в системе.
+    {% else %}
+      Не удалось создать пользователя.
+    {% endif %}
+  </div>
+{% endif %}
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link {% if tab=='students' %}active{% endif %}"
+       href="{{ url_for('pages.admin_users', tab='students', q=q) }}">Ученики</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab=='cooks' %}active{% endif %}"
+       href="{{ url_for('pages.admin_users', tab='cooks', q=q) }}">Повара</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if tab=='admins' %}active{% endif %}"
+       href="{{ url_for('pages.admin_users', tab='admins', q=q) }}">Администраторы</a>
+  </li>
+</ul>
+
+<form class="row g-2 mb-3" method="get" action="/admin/users">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <div class="col-md-10">
+    <input class="form-control" name="q" value="{{ q }}" placeholder="Поиск: email, имя, фамилия">
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-primary w-100" type="submit">Найти</button>
+  </div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th style="width: 80px;">ID</th>
+            <th>E-mail</th>
+            <th>ФИО</th>
+            <th style="width: 140px;">Баланс</th>
+            <th style="width: 160px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+            <tr>
+              <td>{{ u.id }}</td>
+              <td>{{ u.email }}</td>
+              <td>{{ (u.last_name or '') ~ ' ' ~ (u.first_name or '') }}</td>
+              <td>{{ "%.2f"|format(u.balance or 0) }}</td>
+              <td class="text-end">
+                <a class="btn btn-outline-secondary btn-sm"
+                   href="{{ url_for('pages.admin_user_edit_form', user_id=u.id) }}">Редактировать</a>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-muted p-3">Пользователей нет</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set rk = (fixed_role or '')|lower %}
+{% if rk == 'student' %}
+  {% set title = 'Добавить ученика' %}
+{% elif rk == 'cook' %}
+  {% set title = 'Добавить повара' %}
+{% elif rk == 'admin' %}
+  {% set title = 'Добавить администратора' %}
+{% else %}
+  {% set title = 'Добавить пользователя' %}
+{% endif %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">{{ title }}</h1>
+  <a class="btn btn-outline-secondary" href="{{ url_for('pages.admin_users', tab=rk ~ 's') }}">Назад</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" action="{{ url_for('pages.admin_users_create', role_key=rk) }}">
+      <div class="mb-3">
+        <label class="form-label">E-mail</label>
+        <input type="email" class="form-control" name="email" required>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Имя</label>
+            <input type="text" class="form-control" name="first_name" required>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Фамилия</label>
+            <input type="text" class="form-control" name="last_name" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Пароль</label>
+        <input type="password" class="form-control" name="password" minlength="6" required>
+        <div class="form-text">Минимум 6 символов.</div>
+      </div>
+
+
+      <button class="btn btn-primary" type="submit">Создать</button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

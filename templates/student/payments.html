@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">История платежей</h2>
+
+{% if not payment_groups %}
+  <div class="alert alert-info">Платежей пока нет.</div>
+{% else %}
+
+  {% for g in payment_groups %}
+    <div class="card mb-3">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div class="fw-semibold">
+          {% if g['menu_date'] %}
+            Заказ еды на: {{ g['title'] }}
+          {% else %}
+            {{ g['title'] }}
+          {% endif %}
+        </div>
+        <div class="text-nowrap">
+          <span class="text-muted">Итого:</span>
+          <span class="fw-semibold">{{ '%.2f'|format(g['total'] or 0) }} ₽</span>
+        </div>
+      </div>
+
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table mb-0 align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Дата оплаты</th>
+                <th>Приём пищи</th>
+                <th>Блюдо / назначение</th>
+                <th>Тип</th>
+                <th class="text-end">Сумма</th>
+                <th class="text-end">Заказ</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {% for p in g['items'] %}
+                {% set ptype = (p.payment_type or "")|upper %}
+                {% set has_order = p.order_id and p.order and p.order.menu_day_item and p.order.menu_day_item.menu_day %}
+
+                <tr>
+                  <td class="text-nowrap">
+                    {{ p.created_at.strftime("%d.%m.%Y %H:%M") if p.created_at else "—" }}
+                  </td>
+
+                  <td class="text-nowrap">
+                    {% if has_order %}
+                      {% set mt = (p.order.menu_day_item.menu_day.meal_type or "")|upper %}
+                      {{ meal_ru.get(mt, p.order.menu_day_item.menu_day.meal_type) }}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {% if has_order and p.order.menu_day_item.menu_item %}
+                      {{ p.order.menu_day_item.menu_item.name }}
+                    {% else %}
+                      {% if ptype == "TOPUP" %}
+                        <span class="fw-semibold">Пополнение баланса</span>
+                      {% else %}
+                        <span class="text-muted">—</span>
+                      {% endif %}
+                    {% endif %}
+                  </td>
+
+                  <td>
+                    {{ type_ru.get(ptype, p.payment_type) }}
+                  </td>
+
+                  <td class="text-end text-nowrap">
+                    {{ '%.2f'|format(p.amount or 0) }} ₽
+                  </td>
+
+                  <td class="text-end text-nowrap">
+                    {% if has_order %}
+                      <a href="{{ url_for('pages.student_pay', date=p.order.menu_day_item.menu_day.menu_date.isoformat()) }}">
+                        посмотреть заказ
+                      </a>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+
+{% endif %}
+
+{% endblock %}

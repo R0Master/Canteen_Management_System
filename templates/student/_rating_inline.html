@@ -1,0 +1,76 @@
+{# templates/student/_rating_inline.html #}
+
+{% if item is defined %}
+  {% set avg = item.avg_rating or 0 %}
+  {% set cnt = item.reviews_count or 0 %}
+  {% set my = item.my_rating %}
+  {% set can_rate = item.can_rate %}
+  {% set mid = item.menu_item_id %}
+{% else %}
+  {% set avg = avg_rating or 0 %}
+  {% set cnt = reviews_count or 0 %}
+  {% set my = my_rating %}
+  {% set can_rate = can_rate %}
+  {% set mid = menu_item_id %}
+{% endif %}
+
+{# звездочки: округляем до целого #}
+{% set stars = (avg|round(0, 'common'))|int %}
+
+<div class="small text-muted" style="line-height: 1.15;">
+
+  {# 1) строка со звёздами и "4.2 (10)" #}
+  <div class="text-nowrap">
+    <span aria-label="rating">
+      {% for i in range(1, 6) %}
+        {% if i <= stars %}★{% else %}☆{% endif %}
+      {% endfor %}
+    </span>
+    <span class="ms-1">
+      {{ '%.1f'|format(avg) }} ({{ cnt }})
+    </span>
+  </div>
+
+  {# 2) строка под звёздами: "ваша: ..." ИЛИ "оценить" ИЛИ "оценить недоступно" #}
+  <div class="mt-1">
+    {% if my %}
+      <span class="text-success">ваша: {{ my }}/5</span>
+    {% elif can_rate %}
+      <a href="javascript:void(0)"
+         class="text-primary text-decoration-none"
+         onclick="document.getElementById('rate-form-{{ mid }}').classList.toggle('d-none');">
+        оценить
+      </a>
+    {% else %}
+      <span class="text-secondary" title="Можно оценить после заказа и получения">
+        оценить недоступно
+      </span>
+    {% endif %}
+  </div>
+
+  {# 3) форма — строго под "оценить" #}
+  {% if can_rate and not my %}
+    <form id="rate-form-{{ mid }}"
+          class="d-none mt-2"
+          hx-post="/student/review"
+          hx-target="#rating-inline-{{ mid }}"
+          hx-swap="outerHTML">
+      <input type="hidden" name="menu_item_id" value="{{ mid }}">
+
+      <div class="d-flex gap-2 align-items-center">
+        <select name="rating"
+                class="form-select form-select-sm"
+                style="max-width: 90px;">
+          {% for r in range(5, 0, -1) %}
+            <option value="{{ r }}">{{ r }}</option>
+          {% endfor %}
+        </select>
+
+        <button class="btn btn-sm btn-primary" type="submit">
+          Сохранить
+        </button>
+      </div>
+    </form>
+  {% endif %}
+
+</div>

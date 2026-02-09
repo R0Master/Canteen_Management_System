@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-1">Статистика</h1>
+    <div class="text-muted small">
+      Период: <span class="fw-semibold">{{ date_from }}</span> — <span class="fw-semibold">{{ date_to }}</span>
+    </div>
+  </div>
+
+  <form class="d-flex flex-wrap gap-2 align-items-end" method="get" action="/admin/dashboard">
+    <div>
+      <label class="form-label mb-1">Дата с</label>
+      <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+    </div>
+    <div>
+      <label class="form-label mb-1">Дата по</label>
+      <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+    </div>
+    <div>
+      <button class="btn btn-primary" type="submit">Показать</button>
+    </div>
+  </form>
+</div>
+
+{# ===================== KPI ===================== #}
+{% set conv_paid = ((issued_positions_total / bought_dishes * 100) if bought_dishes else 0) %}
+{% set conv_ordered = ((issued_positions_total / ordered_positions_total * 100) if ordered_positions_total else 0) %}
+
+<div class="row g-3 mb-3">
+  <div class="col-12 col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">Выручка за питание</div>
+        <div class="h4 mb-0">{{ "%.2f"|format(bought_sum) }} ₽</div>
+        <div class="text-muted small mt-1">
+          Платежей: <span class="fw-semibold">{{ paid_events }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">Плательщики</div>
+        <div class="h4 mb-0">{{ paid_students }} <span class="text-muted fs-6">из {{ total_students }}</span></div>
+        <div class="text-muted small mt-1">
+          Уникальных учеников, оплативших питание
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">Оплаченные заказы</div>
+        <div class="h4 mb-0">{{ bought_dishes }}</div>
+        <div class="text-muted small mt-1">
+          Статусы: <span class="fw-semibold">PAID + ISSUED</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-md-3">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="text-muted small">Выдано (посещаемость)</div>
+        <div class="h4 mb-0">{{ issued_positions_total }}</div>
+        <div class="text-muted small mt-1">
+          Статус выдачи: <span class="fw-semibold">ISSUED</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  {# ===================== Оплаты ===================== #}
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="fw-bold">Оплаты за питание</div>
+          <span class="badge bg-light text-dark">Период: {{ date_from }} — {{ date_to }}</span>
+        </div>
+
+        <div class="text-muted small mb-3">
+          В блоке учитываются покупки питания (платежи, привязанные к заказам). Отдельно ниже — пополнения баланса.
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <div class="border rounded-3 p-2 h-100">
+              <div class="text-muted small">Плательщиков</div>
+              <div class="fw-semibold">{{ paid_students }} из {{ total_students }}</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="border rounded-3 p-2 h-100">
+              <div class="text-muted small">Оплат (операций)</div>
+              <div class="fw-semibold">{{ paid_events }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Тип оплаты</th>
+                <th class="text-end">Учеников</th>
+                <th class="text-end">Оплаченных заказов</th>
+                <th class="text-end">Операций</th>
+                <th class="text-end">Сумма, ₽</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Абонемент</td>
+                <td class="text-end">{{ balance_students }}</td>
+                <td class="text-end">{{ balance_dishes }}</td>
+                <td class="text-end">{{ balance_events }}</td>
+                <td class="text-end">{{ "%.2f"|format(balance_sum) }}</td>
+              </tr>
+              <tr>
+                <td>Карта</td>
+                <td class="text-end">{{ card_students }}</td>
+                <td class="text-end">{{ card_dishes }}</td>
+                <td class="text-end">{{ card_events }}</td>
+                <td class="text-end">{{ "%.2f"|format(card_sum) }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="table-light">
+                <td class="fw-semibold">Итого</td>
+                <td class="text-end fw-semibold">{{ paid_students }}</td>
+                <td class="text-end fw-semibold">{{ bought_dishes }}</td>
+                <td class="text-end fw-semibold">{{ paid_events }}</td>
+                <td class="text-end fw-semibold">{{ "%.2f"|format(bought_sum) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="fw-semibold">Пополнения баланса (не покупка питания)</div>
+          <span class="badge bg-light text-dark">{{ topup_count }} операций</span>
+        </div>
+        <div class="text-muted small mt-1">
+          Учеников: <span class="fw-semibold">{{ topup_students }}</span>,
+          сумма: <span class="fw-semibold">{{ "%.2f"|format(topup_sum) }} ₽</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ===================== Заказы и выдача ===================== #}
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <div class="fw-bold">Заказы и выдача (посещаемость)</div>
+          <span class="badge bg-light text-dark">Всего учеников: {{ total_students }}</span>
+        </div>
+
+        <div class="text-muted small mb-3">
+          “Получили питание” считается по факту выдачи сотрудником столовой (статус заказа <span class="fw-semibold">ISSUED</span>).
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <div class="border rounded-3 p-2 h-100">
+              <div class="text-muted small">Заказывали (хоть раз)</div>
+              <div class="fw-semibold">{{ ordered_students_any }} из {{ total_students }}</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="border rounded-3 p-2 h-100">
+              <div class="text-muted small">Получили (хоть раз)</div>
+              <div class="fw-semibold">{{ issued_students_any }} из {{ total_students }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-6">
+            <div class="border rounded-3 p-2 h-100">
+              <div class="text-muted small">Заказано позиций</div>
+              <div class="fw-semibold">{{ ordered_positions_total }}</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="border rounded-3 p-2 h-100">
+              <div class="text-muted small">Выдано позиций</div>
+              <div class="fw-semibold">{{ issued_positions_total }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="border rounded-3 p-2 mb-3">
+          <div class="d-flex justify-content-between">
+            <div class="text-muted small">Конверсия выдачи</div>
+            <div class="text-muted small">
+              из оплаченных: <span class="fw-semibold">{{ "%.0f"|format(conv_paid) }}%</span> ·
+              из заказанных: <span class="fw-semibold">{{ "%.0f"|format(conv_ordered) }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="fw-bold mb-2">По дням</div>
+        <div class="table-responsive">
+          <table class="table table-sm mb-0">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th class="text-end">Заказывали (шт.)</th>
+                <th class="text-end">Выдано (шт.)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in day_rows %}
+                <tr>
+                  <td>{{ row.menu_date }}</td>
+                  <td class="text-end">{{ row.ordered }}</td>
+                  <td class="text-end">{{ row.issued }}</td>
+                </tr>
+              {% else %}
+                <tr>
+                  <td colspan="3" class="text-muted">Нет данных за период</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,150 @@
+{# templates/student/_meal_block.html #}
+
+{% if meal_type == "BREAKFAST" %}
+  {% set title = "Завтрак" %}
+  {% set items = breakfast_items %}
+  {% set block_id = "breakfast-block" %}
+{% else %}
+  {% set title = "Обед" %}
+  {% set items = lunch_items %}
+  {% set block_id = "lunch-block" %}
+{% endif %}
+
+{% set locked = locked if locked is defined else false %}
+
+{# selected_ids: если заказ оформлен — берём из БД (locked_selected), иначе из session draft #}
+{% if locked and locked_selected is defined %}
+  {% set selected_ids = locked_selected.get(meal_type, []) %}
+{% else %}
+  {% set day = session.menu_draft.get(selected_date.isoformat(), {}) if session.menu_draft else {} %}
+  {% set selected_ids = day.get(meal_type, []) %}
+{% endif %}
+
+{# normalize if old int stored #}
+{% if selected_ids is number %}
+  {% set selected_ids = [selected_ids] %}
+{% endif %}
+
+{# ========================================================= #}
+{# ВАЖНО: возвращаем контейнер с тем же id, что стоит в hx-target #}
+{# ========================================================= #}
+<div id="{{ block_id }}">
+  <h3 class="mb-3">{{ title }}</h3>
+
+  <div class="meal-block">
+    {% for item in items %}
+      {% set selected = item.menu_day_item_id in selected_ids %}
+
+      <div class="card mb-2 {% if selected %}border-success{% endif %}">
+        <div class="card-body d-flex justify-content-between align-items-start gap-3">
+
+          {# ЛЕВАЯ ЧАСТЬ: название + описание + цена + аллергены #}
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-start justify-content-between gap-3">
+              <div class="me-2">
+                <div class="fw-semibold">{{ item.name }}</div>
+                {% if item.description %}
+                  <div class="text-muted">{{ item.description }}</div>
+                {% endif %}
+                <div>{{ '%.2f'|format(item.price or 0) }} ₽</div>
+
+                {# ---- Аллергены (Bootstrap-only, RU) ---- #}
+                {% set item_allergens = item.allergen_flags or [] %}
+                {% set user_allergens = (current_user.allergen_flags if current_user and current_user.is_authenticated else []) or [] %}
+
+                {% set allergen_ru = {
+                  "MILK": "молоко",
+                  "EGGS": "яйца",
+                  "FISH": "рыба",
+                  "NUTS": "орехи",
+                  "PEANUTS": "арахис",
+                  "GLUTEN": "глютен",
+                  "SOY": "соя"
+                } %}
+
+                {% set danger = [] %}
+                {% for a in item_allergens %}
+                  {% if a in user_allergens %}
+                    {% set _ = danger.append(a) %}
+                  {% endif %}
+                {% endfor %}
+
+                {% if item_allergens %}
+                  <div class="mt-2 small">
+                    <span class="text-muted me-1">Аллергены:</span>
+
+                    {% for a in item_allergens %}
+                      {% set label = allergen_ru.get(a, a) %}
+                      {% if a in danger %}
+                        <span class="badge rounded-pill text-bg-danger me-1">
+                          {{ label }}
+                        </span>
+                      {% else %}
+                        <span class="badge rounded-pill text-bg-light text-dark border me-1">
+                          {{ label }}
+                        </span>
+                      {% endif %}
+                    {% endfor %}
+
+                    {% if danger %}
+                      <div class="text-danger mt-1">
+                        ⚠ содержит аллергены из вашего профиля
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endif %}
+
+                {% if item.forbidden %}
+                  <div class="text-danger mt-2">⚠ противопоказано</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          {# ПРАВАЯ ЧАСТЬ: действия + рейтинг под кнопкой (чтобы не "елозили") #}
+          <div class="text-end" style="min-width: 220px;">
+            {% if selected %}
+              <span class="badge bg-success d-inline-block mb-2">Выбрано ✓</span>
+              <div class="d-grid gap-2 justify-content-end">
+                <button class="btn btn-sm btn-outline-danger"
+                        hx-post="/student/menu/unselect"
+                        hx-target="#{{ block_id }}"
+                        hx-swap="outerHTML"
+                        hx-vals='{
+                          "date": "{{ selected_date.isoformat() }}",
+                          "meal_type": "{{ meal_type }}",
+                          "menu_day_item_id": {{ item.menu_day_item_id }}
+                        }'>
+                  Отменить выбор
+                </button>
+              </div>
+            {% else %}
+              <div class="d-grid gap-2 justify-content-end">
+                <button class="btn btn-sm btn-primary"
+                        {% if locked %}disabled{% endif %}
+                        hx-post="/student/menu/select"
+                        hx-target="#{{ block_id }}"
+                        hx-swap="outerHTML"
+                        hx-vals='{
+                          "date": "{{ selected_date.isoformat() }}",
+                          "meal_type": "{{ meal_type }}",
+                          "menu_day_item_id": {{ item.menu_day_item_id }}
+                        }'>
+                  Заказать
+                </button>
+              </div>
+            {% endif %}
+
+            {# рейтинг всегда прибит под кнопкой вправо #}
+            <div class="mt-2 text-end" style="min-height: 22px;">
+              <div id="rating-inline-{{ item.menu_item_id }}">
+                {% include "student/_rating_inline.html" with context %}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>

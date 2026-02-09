@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h5 mb-0">Склад</h1>
+    <div class="text-muted small">
+      Остатки и потребность на {{ stock_horizon_label }} от {{ stock_base_date.strftime("%d.%m.%Y") }}
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('pages.cook_dashboard') }}">Назад</a>
+
+    <a class="btn btn-dark btn-sm"
+       href="{{ url_for('pages.cook_purchase_request_new') }}">
+      Сформировать заявку
+    </a>
+  </div>
+</div>
+
+{# --- ИНФО-БЛОК --- #}
+{% if not any_on_hand and not any_on_order %}
+  <div class="alert alert-secondary">
+    Склад не заполнен: по всем ингредиентам сейчас <b>0</b>.
+    Заполни остатки — тогда расчёт станет осмысленным.
+  </div>
+{% else %}
+  {% if stock_ok %}
+    {% if deficit_stock_count > 0 %}
+      <div class="alert alert-info">
+        Закупка не требуется: <b>с учётом уже заказанного</b> потребность закрыта.
+        <br>
+        Но прямо сейчас на складе не хватает по <b>{{ deficit_stock_count }}</b> позициям — ждём поставку.
+      </div>
+    {% else %}
+      <div class="alert alert-success">
+        Остатков на складе достаточно на {{ stock_horizon_label }} — закупка не требуется.
+      </div>
+    {% endif %}
+  {% else %}
+    <div class="alert alert-warning">
+      Требуется закупка: не хватает по <b>{{ deficit_count }}</b> позициям на {{ stock_horizon_label }}.
+    </div>
+  {% endif %}
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="card-body">
+
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Ингредиент</th>
+
+            <th class="text-end">
+              В наличии<br>
+              <span class="text-muted small">(кг / л / шт)</span>
+            </th>
+
+            <th class="text-end">
+              Заказано<br>
+              <span class="text-muted small">(кг / л / шт)</span>
+            </th>
+
+            <th class="text-end">
+              Нужно на период<br>
+              <span class="text-muted small">(кг / л / шт)</span>
+            </th>
+
+            <th class="text-end">
+              Не хватает сейчас<br>
+              <span class="text-muted small">(кг / л / шт)</span>
+            </th>
+
+            <th class="text-end">
+              Нужно закупить<br>
+              <span class="text-muted small">(кг / л / шт)</span>
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for it in items %}
+            {% set has_deficit = it.deficit > 0 %}
+            {% set has_stock_deficit = it.deficit_stock > 0 %}
+
+            <tr class="{% if has_deficit %}table-danger{% elif has_stock_deficit %}table-warning{% endif %}">
+              <td>
+                {{ it.name }}
+                <div class="text-muted small">({{ it.unit }})</div>
+              </td>
+
+              <td class="text-end">{{ it.on_hand_s }}</td>
+              <td class="text-end">{{ it.on_order_s }}</td>
+              <td class="text-end">{{ it.need_s }}</td>
+
+              <td class="text-end fw-semibold text-warning">
+                {% if has_stock_deficit %}
+                  {{ it.deficit_stock_s }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+
+              <td class="text-end fw-semibold text-danger">
+                {% if has_deficit %}
+                  {{ it.deficit_s }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="text-muted small mt-3">
+      <b>Как читать таблицу:</b><br>
+      • <b>В наличии</b>, <b>Заказано</b>, <b>Нужно</b> — в единицах ингредиента (кг / л / шт)<br>
+      • <b>Не хватает сейчас</b> — чего не хватает на складе прямо сейчас (жёлтое)<br>
+      • <b>Нужно закупить</b> — сколько нужно докупить, если поставки не учитывать (красное)
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

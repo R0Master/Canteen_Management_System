@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1 class="h3 mb-3">Согласование заявок</h1>
+
+<form class="row g-2 align-items-end mb-3" method="get" action="/admin/purchase-requests">
+  <div class="col-md-4">
+    <label class="form-label">Статус</label>
+    <select class="form-select" name="status">
+      <option value="" {% if not status %}selected{% endif %}>Все</option>
+      <option value="CREATED" {% if status=='CREATED' %}selected{% endif %}>Ожидает одобрения</option>
+      <option value="APPROVED" {% if status=='APPROVED' %}selected{% endif %}>Одобрена</option>
+      <option value="REJECTED" {% if status=='REJECTED' %}selected{% endif %}>Отклонена</option>
+      <option value="COMPLETED" {% if status=='COMPLETED' %}selected{% endif %}>Выполнена</option>
+      <option value="CANCELLED" {% if status=='CANCELLED' %}selected{% endif %}>Отменена</option>
+    </select>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-primary" type="submit">Фильтр</button>
+  </div>
+</form>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th style="width: 60px;"></th>
+            <th style="width: 90px;">ID</th>
+            <th>Создана</th>
+            <th>Кем создана</th>
+            <th>Статус</th>
+            <th class="text-end">Сумма</th>
+            <th class="text-end" style="width: 220px;">Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          {% for r in rows %}
+            <tr>
+              <td>
+                  <button
+                    class="btn btn-outline-secondary btn-sm pr-toggle"
+                    type="button"
+                    data-pr-id="{{ r.id }}"
+                    data-url="{{ url_for('pages.admin_purchase_request_details', pr_id=r.id) }}"
+                    aria-label="Показать/скрыть"
+                  >▸</button>
+              </td>
+
+              <td>#{{ r.id }}</td>
+              <td>{{ r.created_at }}</td>
+              <td>{{ r.creator }}</td>
+              <td>{{ r.status_ru }}</td>
+              <td class="text-end">{{ "%.2f"|format(r.total_sum) }}</td>
+
+              <td class="text-end">
+                {% if r.status == 'CREATED' %}
+                  <form method="post"
+                        action="{{ url_for('pages.admin_purchase_request_approve', pr_id=r.id) }}"
+                        class="d-inline"
+                        hx-post="{{ url_for('pages.admin_purchase_request_approve', pr_id=r.id) }}"
+                        hx-swap="none">
+                    <button class="btn btn-success btn-sm" type="submit">Одобрить</button>
+                  </form>
+
+                  <form method="post"
+                        action="{{ url_for('pages.admin_purchase_request_reject', pr_id=r.id) }}"
+                        class="d-inline"
+                        hx-post="{{ url_for('pages.admin_purchase_request_reject', pr_id=r.id) }}"
+                        hx-swap="none">
+                    <button class="btn btn-danger btn-sm" type="submit">Отклонить</button>
+                  </form>
+                {% else %}
+                  <span class="text-muted small">—</span>
+                {% endif %}
+              </td>
+            </tr>
+
+            <tr class="bg-light">
+              <td colspan="7" class="p-0">
+                <div id="pr-details-{{ r.id }}"></div>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="7" class="text-muted p-3">Заявок нет</td>
+            </tr>
+          {% endfor %}
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  // toggle раскрытия заявок: если блок пустой — грузим, иначе очищаем
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".pr-toggle");
+    if (!btn) return;
+
+    const prId = btn.getAttribute("data-pr-id");
+    const url = btn.getAttribute("data-url");
+    const target = document.getElementById("pr-details-" + prId);
+    if (!target) return;
+
+    // если уже раскрыто — свернуть
+    if (target.innerHTML && target.innerHTML.trim() !== "") {
+      target.innerHTML = "";
+      btn.textContent = "▸";
+      return;
+    }
+
+    // раскрыть — подгрузить через htmx
+    btn.textContent = "▾";
+    htmx.ajax("GET", url, { target: target, swap: "innerHTML" });
+  });
+
+  // после approve/reject (HX-Trigger: pr-updated) просто перезагружаем страницу
+  document.body.addEventListener("pr-updated", function () {
+    window.location.reload();
+  });
+</script>
+
+{% endblock %}

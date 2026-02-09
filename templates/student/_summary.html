@@ -1,0 +1,208 @@
+{# templates/student/_summary.html #}
+
+{% set locked = locked if locked is defined else false %}
+{% set status = (existing_orders_status or "") %}
+
+{# ---------- Draft selections (when not locked) ---------- #}
+{% if not locked %}
+  {% set day = session.menu_draft.get(selected_date.isoformat(), {}) if session.menu_draft else {} %}
+  {% set breakfast_ids = day.get("BREAKFAST", []) %}
+  {% set lunch_ids = day.get("LUNCH", []) %}
+
+  {# normalize if old int stored #}
+  {% if breakfast_ids is number %}{% set breakfast_ids = [breakfast_ids] %}{% endif %}
+  {% if lunch_ids is number %}{% set lunch_ids = [lunch_ids] %}{% endif %}
+
+  {% set ns_bt = namespace(sum=0) %}
+  {% for mdi_id in breakfast_ids %}
+    {% for it in breakfast_items %}
+      {% if it.menu_day_item_id == mdi_id %}
+        {% set ns_bt.sum = ns_bt.sum + (it.price or 0) %}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+
+  {% set ns_lt = namespace(sum=0) %}
+  {% for mdi_id in lunch_ids %}
+    {% for it in lunch_items %}
+      {% if it.menu_day_item_id == mdi_id %}
+        {% set ns_lt.sum = ns_lt.sum + (it.price or 0) %}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+
+  {% set breakfast_total = ns_bt.sum %}
+  {% set lunch_total = ns_lt.sum %}
+  {% set grand_total = (breakfast_total or 0) + (lunch_total or 0) %}
+{% endif %}
+
+<h4 class="mb-3">Ваш заказ</h4>
+
+{# ---------- LOCKED: show order from DB ---------- #}
+{% if locked %}
+
+  <div class="alert alert-info py-2">
+    Заказ на эту дату уже оформлен. Изменение недоступно.
+  </div>
+
+  {# ---- Breakfast ---- #}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <strong>Завтрак</strong>
+        <span class="text-nowrap text-muted">{{ '%.2f'|format(locked_total_breakfast or 0) }} ₽</span>
+      </div>
+
+      {% if locked_breakfast and locked_breakfast|length > 0 %}
+        <ul class="list-unstyled mb-0">
+          {% for it in locked_breakfast %}
+            <li class="d-flex justify-content-between">
+              <span>{{ it.name }}</span>
+              <span class="text-nowrap">{{ '%.2f'|format(it.price or 0) }} ₽</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted">Нет позиций</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ---- Lunch ---- #}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <strong>Обед</strong>
+        <span class="text-nowrap text-muted">{{ '%.2f'|format(locked_total_lunch or 0) }} ₽</span>
+      </div>
+
+      {% if locked_lunch and locked_lunch|length > 0 %}
+        <ul class="list-unstyled mb-0">
+          {% for it in locked_lunch %}
+            <li class="d-flex justify-content-between">
+              <span>{{ it.name }}</span>
+              <span class="text-nowrap">{{ '%.2f'|format(it.price or 0) }} ₽</span>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted">Нет позиций</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ---- Total ---- #}
+  <div class="d-flex justify-content-between align-items-baseline mb-3">
+    <strong>Итого</strong>
+    <strong class="text-nowrap">{{ '%.2f'|format(locked_total or 0) }} ₽</strong>
+  </div>
+
+  {# ---- Actions by status ---- #}
+  {% if status == "CREATED" %}
+    <div class="alert alert-warning py-2">
+      Заказ оформлен, требуется оплата.
+    </div>
+
+    <a class="btn btn-success"
+       href="/student/pay?date={{ selected_date.isoformat() }}">
+      Перейти к оплате
+    </a>
+
+    <form method="post" action="/student/order/cancel" class="d-inline ms-2">
+      <input type="hidden" name="date" value="{{ selected_date.isoformat() }}">
+      <button class="btn btn-outline-danger">
+        Отменить заказ
+      </button>
+    </form>
+
+  {% elif status == "PAID" %}
+    <div class="alert alert-success py-2">
+      Заказ оплачен.
+    </div>
+
+  {% elif status == "ISSUED" %}
+    <div class="alert alert-success py-2">
+      Заказ выдан.
+    </div>
+
+  {% else %}
+    <div class="alert alert-info py-2">
+      Заказ уже создан.
+    </div>
+  {% endif %}
+
+{# ---------- NOT LOCKED: show draft summary ---------- #}
+{% else %}
+
+  {# ---- Breakfast ---- #}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <strong>Завтрак</strong>
+        <span class="text-nowrap text-muted">{{ '%.2f'|format(breakfast_total or 0) }} ₽</span>
+      </div>
+
+      {% if breakfast_ids and breakfast_items %}
+        <ul class="list-unstyled mb-0">
+          {% for mdi_id in breakfast_ids %}
+            {% for it in breakfast_items %}
+              {% if it.menu_day_item_id == mdi_id %}
+                <li class="d-flex justify-content-between">
+                  <span>{{ it.name }}</span>
+                  <span class="text-nowrap">{{ '%.2f'|format(it.price or 0) }} ₽</span>
+                </li>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted">Не выбрано</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ---- Lunch ---- #}
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-baseline mb-2">
+        <strong>Обед</strong>
+        <span class="text-nowrap text-muted">{{ '%.2f'|format(lunch_total or 0) }} ₽</span>
+      </div>
+
+      {% if lunch_ids and lunch_items %}
+        <ul class="list-unstyled mb-0">
+          {% for mdi_id in lunch_ids %}
+            {% for it in lunch_items %}
+              {% if it.menu_day_item_id == mdi_id %}
+                <li class="d-flex justify-content-between">
+                  <span>{{ it.name }}</span>
+                  <span class="text-nowrap">{{ '%.2f'|format(it.price or 0) }} ₽</span>
+                </li>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="text-muted">Не выбрано</div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ---- Total ---- #}
+  <div class="d-flex justify-content-between align-items-baseline mb-3">
+    <strong>Итого</strong>
+    <strong class="text-nowrap">{{ '%.2f'|format(grand_total or 0) }} ₽</strong>
+  </div>
+
+  {# ---- Confirm ---- #}
+  <form method="post" action="/student/menu/confirm">
+    <input type="hidden" name="date" value="{{ selected_date.isoformat() }}">
+    {% set total_selected = (breakfast_ids|length) + (lunch_ids|length) %}
+
+    <button class="btn btn-success"
+            {% if total_selected == 0 %}disabled{% endif %}>
+      Оформить и перейти к оплате
+    </button>
+  </form>
+
+{% endif %}

@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="h3 mb-3">Отчёты</h1>
+
+<form class="row g-2 mb-3" method="get" action="/admin/reports">
+  <div class="col-md-4">
+    <label class="form-label">Дата с</label>
+    <input type="date" class="form-control" name="date_from" value="{{ date_from }}">
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Дата по</label>
+    <input type="date" class="form-control" name="date_to" value="{{ date_to }}">
+  </div>
+  <div class="col-md-4 align-self-end">
+    <button class="btn btn-primary" type="submit">Сформировать</button>
+  </div>
+</form>
+
+<div class="row g-3">
+
+  {# ===================== ПИТАНИЕ ===================== #}
+  <div class="col-lg-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="fw-bold mb-1">Питание (по датам питания)</div>
+        <div class="text-muted small mb-3">
+          За период: заказано → оплачено → выдано. Даты считаются по дате выдачи.
+        </div>
+
+        {% set ob = ordered_breakfast or 0 %}
+        {% set pb = paid_breakfast or 0 %}
+        {% set ib = issued_breakfast or 0 %}
+
+        {% set ol = ordered_lunch or 0 %}
+        {% set pl = paid_lunch or 0 %}
+        {% set il = issued_lunch or 0 %}
+
+        {% set o_all = ob + ol %}
+        {% set p_all = pb + pl %}
+        {% set i_all = ib + il %}
+
+        <div class="table-responsive">
+          <table class="table table-sm align-middle mb-0">
+            <thead>
+              <tr>
+                <th></th>
+                <th class="text-end">Заказано</th>
+                <th class="text-end">Оплачено</th>
+                <th class="text-end">Выдано</th>
+                <th class="text-end">Конверсия (выдано/оплачено)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="fw-semibold">Завтрак</td>
+                <td class="text-end">{{ ob }}</td>
+                <td class="text-end">{{ pb }}</td>
+                <td class="text-end">{{ ib }}</td>
+                <td class="text-end">
+                  {% if pb > 0 %}
+                    {{ "%.0f"|format((ib * 100.0) / pb) }}%
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+
+              <tr>
+                <td class="fw-semibold">Обед</td>
+                <td class="text-end">{{ ol }}</td>
+                <td class="text-end">{{ pl }}</td>
+                <td class="text-end">{{ il }}</td>
+                <td class="text-end">
+                  {% if pl > 0 %}
+                    {{ "%.0f"|format((il * 100.0) / pl) }}%
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+
+              <tr class="table-light">
+                <td class="fw-semibold">Итого</td>
+                <td class="text-end fw-semibold">{{ o_all }}</td>
+                <td class="text-end fw-semibold">{{ p_all }}</td>
+                <td class="text-end fw-semibold">{{ i_all }}</td>
+                <td class="text-end fw-semibold">
+                  {% if p_all > 0 %}
+                    {{ "%.0f"|format((i_all * 100.0) / p_all) }}%
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="text-muted small mt-2">
+          “Заказано” включает созданные, оплаченные и выданные заказы. “Оплачено” = оплаченно+выдано. “Выдано” = только выданные.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ===================== ЗАКУПКИ ===================== #}
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <div class="fw-bold mb-1">Закупки (по заявкам)</div>
+        <div class="text-muted small mb-2">
+          
+        </div>
+
+        {% set approved = approved_cost if approved_cost is defined else 0 %}
+        {% set pending = pending_cost if pending_cost is defined else 0 %}
+
+        <div class="d-flex justify-content-between">
+          <span>Согласовано </span>
+          <b>{{ "%.2f"|format(approved or 0) }} ₽</b>
+        </div>
+        <div class="d-flex justify-content-between">
+          <span>На согласовании </span>
+          <b>{{ "%.2f"|format(pending or 0) }} ₽</b>
+        </div>
+
+        <hr class="my-2">
+        <div class="d-flex justify-content-between">
+          <span class="text-muted">Итого (согласовано + ожидает)</span>
+          <b>{{ "%.2f"|format((approved or 0) + (pending or 0)) }} ₽</b>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

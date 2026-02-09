@@ -1,0 +1,114 @@
+<div id="cook-issue-column">
+  {% set _date_val = (selected_date.isoformat() if selected_date and selected_date.__class__.__name__ != 'str' else (selected_date or '')) %}
+  {% set _meal_val = (meal_type|upper if meal_type else 'BREAKFAST') %}
+
+
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <strong>Выдача</strong>
+      <span class="badge bg-light text-dark">
+        Выдано: {{ issued_count }} / {{ paid_total }}
+      </span>
+    </div>
+
+    <div class="card-body">
+      <!-- К выдаче -->
+      <div class="mb-3">
+        <div class="fw-semibold mb-2">К выдаче (оплачено)</div>
+
+        {% if not to_issue_orders %}
+          <div class="text-muted">Нет оплаченных заказов для выдачи.</div>
+        {% else %}
+
+        {% if not can_issue %}
+          <div class="alert alert-warning py-2 small mb-2">
+            Выдача возможна только за текущую дату.
+          </div>
+
+          {% endif %}
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Ученик</th>
+                  <th>Блюдо</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for o in to_issue_orders %}
+                  <tr>
+                    <td>{{ o.id }}</td>
+                    <td>
+                      {{ o.user.last_name }} {{ o.user.first_name }}
+                      <div class="small text-muted">{{ o.user.email }}</div>
+                    </td>
+                    <td>{{ o.menu_day_item.menu_item.name }}</td>
+                    <td class="text-end">
+                      <form
+                        hx-post="{{ url_for('pages.cook_issue_order', order_id=o.id) }}"
+                        hx-target="#cook-issue-column"
+                        hx-swap="outerHTML"
+                        method="post"
+                        class="m-0"
+                      >
+                        <input type="hidden" name="date" value="{{ _date_val }}">
+                        <input type="hidden" name="meal_type" value="{{ _meal_val }}">
+                            <button type="submit" class="btn btn-success btn-sm">
+                              Выдать
+                            </button>
+
+
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Выдано -->
+      <div>
+        <div class="fw-semibold mb-2">Выдано</div>
+
+        {% if not issued_orders %}
+          <div class="text-muted">Пока ничего не выдано.</div>
+        {% else %}
+          <div class="table-responsive">
+            <table class="table table-sm align-middle">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Ученик</th>
+                  <th>Блюдо</th>
+                  <th>Время</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for o in issued_orders %}
+                  <tr class="table-light">
+                    <td>{{ o.id }}</td>
+                    <td>
+                      {{ o.user.last_name }} {{ o.user.first_name }}
+                      <div class="small text-muted">{{ o.user.email }}</div>
+                    </td>
+                    <td>{{ o.menu_day_item.menu_item.name }}</td>
+                    <td class="small text-muted">
+                      {% if o.issued_at %}
+                        {{ o.issued_at.strftime("%Y-%m-%d %H:%M") if o.issued_at.strftime else o.issued_at }}
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Мои заказы</h2>
+
+{% if not orders %}
+  <div class="alert alert-info">
+    У вас пока нет заказов.
+  </div>
+{% else %}
+
+  {% for o in orders %}
+    {% set st = (o.status or "CREATED")|upper %}
+
+    <div class="card mb-3">
+      <div class="card-body">
+
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+          <div class="fw-semibold">
+            {{ o.date.strftime("%d.%m.%Y") }}
+          </div>
+
+          <div class="d-flex flex-column align-items-end gap-2">
+            {% if st == "CREATED" %}
+              <span class="badge bg-warning text-dark">{{ status_ru[st] }}</span>
+            {% elif st == "PAID" %}
+              <span class="badge bg-success">{{ status_ru[st] }}</span>
+            {% elif st == "ISSUED" %}
+              <span class="badge bg-success">{{ status_ru[st] }}</span>
+            {% elif st == "CANCELLED" %}
+              <span class="badge bg-secondary">{{ status_ru[st] }}</span>
+            {% else %}
+              <span class="badge bg-info">{{ st }}</span>
+            {% endif %}
+
+            {% if st == "CREATED" %}
+              <a class="btn btn-success btn-sm"
+                 href="/student/pay?date={{ o.date.isoformat() }}">
+                Оплатить
+              </a>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="mb-2 text-muted small">
+          Итого: <strong class="text-dark">{{ '%.2f'|format(o.total or 0) }} ₽</strong>
+        </div>
+
+        <div class="row g-3">
+          {% for mt, meal in o.meals.items() %}
+            <div class="col-12 col-lg-6">
+              <div class="border rounded p-3 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <div class="fw-semibold">{{ meal["title"] }}</div>
+                  <div class="text-muted text-nowrap">{{ '%.2f'|format(meal["total"] or 0) }} ₽</div>
+                </div>
+
+                {% if meal["items"] %}
+                  <ul class="list-unstyled mb-0">
+                    {% for it in meal["items"] %}
+                      <li class="d-flex justify-content-between">
+                        <span>{{ it["name"] }}</span>
+                        <span class="text-nowrap text-muted">{{ '%.2f'|format(it["price"] or 0) }} ₽</span>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <div class="text-muted">Нет позиций</div>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+
+      </div>
+    </div>
+  {% endfor %}
+
+{% endif %}
+
+{% endblock %}

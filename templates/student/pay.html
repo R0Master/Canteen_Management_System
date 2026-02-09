@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2 class="mb-4">Оплата · {{ selected_date.strftime("%d.%m.%Y") }}</h2>
+
+{# статусы для UX #}
+{% if is_issued %}
+  <div class="alert alert-success">Заказ уже выдан.</div>
+{% elif is_paid %}
+  <div class="alert alert-success">Заказ уже оплачен.</div>
+{% else %}
+  <div class="alert alert-warning">Статус: ожидает оплаты</div>
+{% endif %}
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-baseline">
+      <strong>Баланс абонемента</strong>
+      <strong class="text-nowrap">{{ '%.2f'|format(balance or 0) }} ₽</strong>
+    </div>
+    {% if not is_paid and not is_issued and (balance or 0) < (total or 0) %}
+      <div class="text-danger small mt-1">Недостаточно средств для оплаты с абонемента</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h5 class="mb-3">Завтрак</h5>
+    {% if breakfast %}
+      <ul class="list-unstyled mb-0">
+        {% for it in breakfast %}
+          <li class="d-flex justify-content-between">
+            <span>{{ it.name }}</span>
+            <span class="text-nowrap">{{ '%.2f'|format(it.price) }} ₽</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="text-muted">Нет позиций</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <h5 class="mb-3">Обед</h5>
+    {% if lunch %}
+      <ul class="list-unstyled mb-0">
+        {% for it in lunch %}
+          <li class="d-flex justify-content-between">
+            <span>{{ it.name }}</span>
+            <span class="text-nowrap">{{ '%.2f'|format(it.price) }} ₽</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div class="text-muted">Нет позиций</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-baseline mb-3">
+  <strong>Итого</strong>
+  <strong class="text-nowrap">{{ '%.2f'|format(total) }} ₽</strong>
+</div>
+
+<form method="post" action="/student/pay" class="d-flex flex-wrap gap-2">
+  <input type="hidden" name="date" value="{{ selected_date.isoformat() }}">
+
+  <button class="btn btn-success"
+          name="method"
+          value="balance"
+          {% if is_paid or is_issued or (balance or 0) < (total or 0) %}disabled{% endif %}>
+    Оплатить с абонемента
+  </button>
+
+  <button class="btn btn-primary"
+          name="method"
+          value="card"
+          {% if is_paid or is_issued %}disabled{% endif %}>
+    Оплатить картой
+  </button>
+
+  <a class="btn btn-outline-secondary"
+     href="/student/menu?date={{ selected_date.isoformat() }}">
+    Назад к меню
+  </a>
+</form>
+
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h5 mb-0">Новая заявка на закупку</h1>
+    <div class="text-muted small">
+      Выполнен автоматический расчёт закупки на ближайшие {{ stock_horizon_label }} от {{ stock_base_date.strftime("%d.%m.%Y") }}.
+      Дефицитные позиции отмечены по умолчанию — можно добавить любые другие и изменить количество упаковок.
+    </div>
+  </div>
+
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('pages.cook_inventory') }}">Назад</a>
+</div>
+
+<form method="post" action="{{ url_for('pages.cook_create_purchase_request') }}">
+  <div class="card shadow-sm">
+    <div class="card-body">
+
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width:40px;"></th>
+              <th>Ингредиент</th>
+
+           
+              <th class="text-end" style="width:160px;">На складе сейчас</th>
+
+              <th class="text-end">Необходимо</th>
+              <th class="text-end" style="width:160px;">Кол-во упаковок</th>
+              <th class="text-end">Объём закупки</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for it in items %}
+              {% set checked = it.is_deficit %}
+              <tr class="{% if it.is_deficit %}table-warning{% endif %}">
+                <td class="text-center">
+                  <input class="form-check-input js-use"
+                         type="checkbox"
+                         name="use_{{ it.ingredient_id }}"
+                         data-ingredient-id="{{ it.ingredient_id }}"
+                         {% if checked %}checked{% endif %}
+                         onchange="toggleRowByCheckbox(this)">
+                </td>
+
+                <td>
+                  <div class="fw-semibold">{{ it.name }}</div>
+                  <div class="text-muted small">
+                    Упаковка:
+                    {% if it.pack_h is defined and it.pack_unit_h is defined %}
+                      {{ it.pack_h }} {{ it.pack_unit_h }}
+                    {% elif it.pack_label is defined %}
+                      {{ it.pack_label }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </div>
+                </td>
+
+                {# ✅ НОВОЕ: показываем остаток и (если есть) “заказано” #}
+                <td class="text-end">
+                  {% if it.on_hand_s is defined %}
+                    <div class="fw-semibold">{{ it.on_hand_s }}</div>
+                    {% if it.on_order_s is defined and it.on_order_s %}
+                      <div class="text-muted small">в пути: {{ it.on_order_s }}</div>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+
+                <td class="text-end">
+                  {% if it.is_deficit %}
+                    {% if it.need_h is defined and it.need_unit_h is defined %}
+                      {{ it.need_h }} {{ it.need_unit_h }}
+                    {% elif it.need_label is defined %}
+                      {{ it.need_label }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+
+                <td class="text-end" style="max-width:160px;">
+                  <input class="form-control form-control-sm text-end js-packs"
+                         type="number" min="0" step="1"
+                         name="packs_{{ it.ingredient_id }}"
+                         value="{{ it.packs }}"
+                         data-ingredient-id="{{ it.ingredient_id }}"
+                         data-pack-base="{{ it.pack_qty_base }}"
+                         data-unit-base="{{ it.unit_base }}"
+                         data-unit-h="{% if it.need_unit_h is defined %}{{ it.need_unit_h }}{% else %}{{ it.unit }}{% endif %}"
+                         oninput="recalcBuy(this)">
+                </td>
+
+                <td class="text-end fw-semibold">
+                  <span id="buy_{{ it.ingredient_id }}"
+                        data-unit-base="{{ it.unit_base }}"
+                        data-unit-h="{% if it.need_unit_h is defined %}{{ it.need_unit_h }}{% else %}{{ it.unit }}{% endif %}">
+                    {% if it.buy_h is defined and it.buy_unit_h is defined %}
+                      {{ it.buy_h }} {{ it.buy_unit_h }}
+                    {% elif it.buy_label is defined %}
+                      {{ it.buy_label }}
+                    {% else %}
+                      —
+                    {% endif %}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 mt-3">
+        <a class="btn btn-outline-secondary" href="{{ url_for('pages.cook_inventory') }}">Отмена</a>
+        <button class="btn btn-primary" type="submit">Создать заявку</button>
+      </div>
+
+      <div class="text-muted small mt-2">
+        Подсказка: чтобы добавить ингредиент в заявку — укажи количество упаковок больше 0 (галочка поставится сама) или поставь галочку вручную.
+      </div>
+
+    </div>
+  </div>
+</form>
+
+<script>
+function fmtQty(x) {
+  const r = Math.round(x * 1000) / 1000;
+  if (Math.abs(r - Math.round(r)) < 1e-9) return String(Math.round(r));
+  return String(r).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');
+}
+
+function baseToHuman(qtyBase, unitBase) {
+  const u = (unitBase || "").toLowerCase();
+  if (u === "г" || u === "g") return {v: qtyBase / 1000.0, u: "кг"};
+  if (u === "мл" || u === "ml") return {v: qtyBase / 1000.0, u: "л"};
+  if (u === "шт" || u === "pcs") return {v: qtyBase, u: "шт"};
+  return {v: qtyBase, u: unitBase};
+}
+
+// если вручную сняли галочку — обнулим packs (чтобы не улетело в заявку) и пересчитаем buy
+function toggleRowByCheckbox(cbEl) {
+  const ingId = cbEl.dataset.ingredientId;
+  const packsInput = document.querySelector('input.js-packs[data-ingredient-id="' + ingId + '"]');
+  if (!packsInput) return;
+
+  if (!cbEl.checked) {
+    packsInput.value = "0";
+    recalcBuy(packsInput);
+  }
+}
+
+function recalcBuy(inputEl) {
+  const ingId = inputEl.dataset.ingredientId;
+  const packBase = parseFloat(inputEl.dataset.packBase || "1");
+  const unitBase = inputEl.dataset.unitBase || "";
+  const packs = parseInt(inputEl.value || "0", 10) || 0;
+
+  // ✅ автогалочка: если packs > 0 — отмечаем строку; если 0 — снимаем
+  const cb = document.querySelector('input.js-use[data-ingredient-id="' + ingId + '"]');
+  if (cb) cb.checked = (packs > 0);
+
+  const buyBase = packs * (packBase > 0 ? packBase : 1);
+  const h = baseToHuman(buyBase, unitBase);
+
+  const span = document.getElementById("buy_" + ingId);
+  if (span) span.textContent = fmtQty(h.v) + " " + h.u;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelectorAll("input.js-packs").forEach(el => recalcBuy(el));
+});
+</script>
+
+{% endblock %}

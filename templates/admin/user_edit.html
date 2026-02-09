@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+
+{% set roles_lower = user_roles|map('lower')|list %}
+{% set is_student = 'student' in roles_lower %}
+{% set is_cook = 'cook' in roles_lower %}
+{% set is_admin = 'admin' in roles_lower %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0">Редактирование пользователя</h1>
+
+  {% if is_student %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.admin_users', tab='students') }}">Назад</a>
+  {% elif is_admin and not is_cook %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.admin_users', tab='admins') }}">Назад</a>
+  {% else %}
+    <a class="btn btn-outline-secondary" href="{{ url_for('pages.admin_users', tab='cooks') }}">Назад</a>
+  {% endif %}
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="post" action="{{ url_for('pages.admin_user_edit_save', user_id=user.id) }}">
+
+      <div class="mb-3">
+        <label class="form-label">E-mail</label>
+        <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
+      </div>
+
+      <div class="row g-2">
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Имя</label>
+            <input type="text" class="form-control" name="first_name" value="{{ user.first_name }}" required>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3">
+            <label class="form-label">Фамилия</label>
+            <input type="text" class="form-control" name="last_name" value="{{ user.last_name }}" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Новый пароль (необязательно)</label>
+        <input type="password" class="form-control" name="password" minlength="6" placeholder="Оставьте пустым, чтобы не менять">
+        <div class="form-text">Минимум 6 символов.</div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Роли</label>
+
+        {% if is_student %}
+          <div class="alert alert-light border mb-0">
+            Ученик: роль фиксирована и не редактируется.
+          </div>
+        {% else %}
+          <div class="form-check">
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="roles"
+                   value="cook"
+                   id="role_cook"
+                   {% if is_cook %}checked{% endif %}>
+            <label class="form-check-label" for="role_cook">Повар</label>
+          </div>
+
+          <div class="form-check">
+            <input class="form-check-input"
+                   type="checkbox"
+                   name="roles"
+                   value="admin"
+                   id="role_admin"
+                   {% if is_admin %}checked{% endif %}>
+            <label class="form-check-label" for="role_admin">Администратор</label>
+          </div>
+
+          <div class="form-text">
+            Сотрудник может быть поваром и администратором одновременно.
+          </div>
+        {% endif %}
+      </div>
+
+      <button class="btn btn-primary" type="submit">Сохранить</button>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}

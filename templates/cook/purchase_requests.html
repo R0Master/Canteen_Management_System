@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h5 mb-0">Заявки на закупку</h1>
+    <div class="text-muted small">Список всех заявок.</div>
+  </div>
+
+  <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('pages.cook_dashboard') }}">Назад</a>
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body">
+
+    {% if prs and prs|length > 0 %}
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead>
+            <tr>
+              <th style="width:90px;">№</th>
+              <th>Статус</th>
+              <th>Создана</th>
+              <th>Сформировал</th>
+              <th class="text-end" style="width:110px;">Позиций</th>
+              <th class="text-end" style="width:120px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pr in prs %}
+              {% set st = (pr.status or '').upper() %}
+              <tr>
+                <td>#{{ pr.id }}</td>
+                <td>
+                  {% if st == 'CREATED' %}
+                    Ожидает одобрения
+                  {% elif st == 'APPROVED' %}
+                    Одобрена
+                  {% elif st == 'REJECTED' %}
+                    Отклонена
+                  {% elif st == 'CANCELLED' %}
+                    Отменена
+                  {% else %}
+                    {{ pr.status }}
+                  {% endif %}
+                </td>
+                <td class="text-muted">
+                  {{ pr.created_at.strftime("%d.%m.%Y %H:%M") if pr.created_at else "" }}
+                </td>
+                <td>
+                  {% if pr.created_by %}
+                    {{ (pr.created_by.last_name ~ ' ' ~ pr.created_by.first_name)
+                       if pr.created_by.last_name and pr.created_by.first_name
+                       else (pr.created_by.email or '—') }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td class="text-end">{{ pr.items|length if pr.items else 0 }}</td>
+                <td class="text-end">
+                  <a class="btn btn-sm btn-outline-primary"
+                     href="{{ url_for('pages.view_purchase_request', request_id=pr.id) }}">
+                    Открыть
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="text-muted">Заявок пока нет.</div>
+    {% endif %}
+
+  </div>
+</div>
+
+{% endblock %}

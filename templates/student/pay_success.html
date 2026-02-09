@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="row justify-content-center">
+  <div class="col-md-8 col-lg-6">
+
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+
+        {% if method == "balance" %}
+          <h2 class="h4 mb-3">Оплата с абонемента успешна ✅</h2>
+        {% else %}
+          <h2 class="h4 mb-3">Оплата картой успешна ✅</h2>
+        {% endif %}
+
+        <div class="mb-2">
+          <strong>Дата:</strong> {{ selected_date.strftime("%d.%m.%Y") }}
+        </div>
+
+        <div class="mb-2">
+          <strong>Сумма:</strong> {{ '%.2f'|format(amount or 0) }} ₽
+        </div>
+
+        {% if method == "balance" %}
+          <div class="mb-3">
+            <strong>Новый баланс абонемента:</strong>
+            {{ '%.2f'|format(new_balance or 0) }} ₽
+          </div>
+        {% endif %}
+
+        <div class="d-flex gap-2">
+          <a class="btn btn-primary" href="/student/menu">
+            Вернуться в меню
+          </a>
+          <a class="btn btn-outline-secondary" href="/student/orders">
+            Мои заказы
+          </a>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
